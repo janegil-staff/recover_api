@@ -28,4 +28,7 @@ router.patch('/medications/bulk',  patient.bulkSaveMedications);
 
 router.post('/share-code',         share.generateShareCode);
 
+router.patch('/advice/relevant', patient.updateRelevantAdvice);
+router.patch('/advice/viewed',   patient.updateViewedAdvice);
+
 export default router;
