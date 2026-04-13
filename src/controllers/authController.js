@@ -1,8 +1,10 @@
 // src/controllers/authController.js
 import bcrypt from 'bcryptjs';
+import crypto from 'crypto';
 import User    from '../models/User.js';
 import Patient from '../models/Patient.js';
 import { signToken, signRefreshToken, verifyRefreshToken } from '../utils/jwt.js';
+import { sendResetCode } from '../utils/mailer.js';
 
 export async function register(req, res, next) {
   try {
@@ -104,6 +106,7 @@ export async function me(req, res, next) {
     res.json({ success: true, data: user });
   } catch (err) { next(err); }
 }
+
 export async function changeEmail(req, res, next) {
   try {
     const { newEmail, password } = req.body;
@@ -114,19 +117,57 @@ export async function changeEmail(req, res, next) {
     if (!user)
       return res.status(404).json({ success: false, message: 'User not found' });
 
-    // Verify PIN (password field carries the PIN)
     const valid = await user.comparePassword(password);
     if (!valid)
       return res.status(401).json({ success: false, message: 'Invalid PIN' });
 
-    // Check new email not already taken
     const existing = await User.findOne({ email: newEmail.toLowerCase() });
     if (existing)
       return res.status(409).json({ success: false, message: 'Email already in use' });
 
     user.email = newEmail.toLowerCase();
     await user.save();
-
     res.json({ success: true, data: { email: user.email } });
+  } catch (err) { next(err); }
+}
+
+export async function forgotPassword(req, res, next) {
+  try {
+    const { email } = req.body;
+    const user = await User.findOne({ email: email?.toLowerCase() });
+    if (user) {
+      const code    = crypto.randomInt(100000, 999999).toString();
+      const expires = new Date(Date.now() + 15 * 60 * 1000);
+      user.resetCode        = code;
+      user.resetCodeExpires = expires;
+      await user.save();
+      await sendResetCode(user.email, code);
+    }
+    // Always respond OK — don't leak whether email exists
+    res.json({ success: true });
+  } catch (err) { next(err); }
+}
+
+export async function verifyResetCode(req, res, next) {
+  try {
+    const { email, code } = req.body;
+    const user = await User.findOne({ email: email?.toLowerCase() });
+    if (!user || user.resetCode !== code || user.resetCodeExpires < new Date())
+      return res.status(400).json({ success: false, message: 'Invalid or expired code' });
+    res.json({ success: true });
+  } catch (err) { next(err); }
+}
+
+export async function resetPassword(req, res, next) {
+  try {
+    const { email, code, newPassword } = req.body;
+    const user = await User.findOne({ email: email?.toLowerCase() });
+    if (!user || user.resetCode !== code || user.resetCodeExpires < new Date())
+      return res.status(400).json({ success: false, message: 'Invalid or expired code' });
+    user.passwordHash     = await bcrypt.hash(newPassword, 12);
+    user.resetCode        = undefined;
+    user.resetCodeExpires = undefined;
+    await user.save();
+    res.json({ success: true });
   } catch (err) { next(err); }
 }

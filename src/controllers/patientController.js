@@ -263,3 +263,4 @@ export async function updateViewedAdvice(req, res, next) {
     res.json({ success: true, data: patient.viewedAdvice });
   } catch (err) { next(err); }
 }
+
