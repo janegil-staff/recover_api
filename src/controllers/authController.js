@@ -1,8 +1,8 @@
 // src/controllers/authController.js
 import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
-import User    from '../models/User.js';
-import Patient from '../models/Patient.js';
+import User       from '../models/User.js';
+import Patient    from '../models/Patient.js';
 import { signToken, signRefreshToken, verifyRefreshToken } from '../utils/jwt.js';
 import { sendResetCode } from '../utils/mailer.js';
 
@@ -130,11 +130,25 @@ export async function changeEmail(req, res, next) {
     res.json({ success: true, data: { email: user.email } });
   } catch (err) { next(err); }
 }
+
 export async function deleteAccount(req, res, next) {
   try {
-    const userId = req.user.userId;
-    await Patient.deleteOne({ userId });
-    await User.deleteOne({ _id: userId });
+    const { password } = req.body;
+    if (!password)
+      return res.status(400).json({ success: false, message: 'Password required' });
+
+    const user = await User.findById(req.user.userId);
+    if (!user)
+      return res.status(404).json({ success: false, message: 'User not found' });
+
+    const valid = await user.comparePassword(password);
+    if (!valid)
+      return res.status(401).json({ success: false, message: 'Invalid password' });
+
+    // Delete patient data first, then the user
+    await Patient.deleteOne({ userId: user._id });
+    await User.deleteOne({ _id: user._id });
+
     res.json({ success: true, message: 'Account deleted' });
   } catch (err) { next(err); }
 }
@@ -176,6 +190,18 @@ export async function resetPassword(req, res, next) {
     user.resetCode        = undefined;
     user.resetCodeExpires = undefined;
     await user.save();
+    res.json({ success: true });
+  } catch (err) { next(err); }
+}
+
+export async function checkEmail(req, res, next) {
+  try {
+    const { email } = req.body;
+    if (!email)
+      return res.status(400).json({ success: false, message: "Email required" });
+    const existing = await User.findOne({ email: email.toLowerCase() });
+    if (existing)
+      return res.status(409).json({ success: false, message: "Email already registered" });
     res.json({ success: true });
   } catch (err) { next(err); }
 }
