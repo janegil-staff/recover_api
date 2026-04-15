@@ -130,6 +130,14 @@ export async function changeEmail(req, res, next) {
     res.json({ success: true, data: { email: user.email } });
   } catch (err) { next(err); }
 }
+export async function deleteAccount(req, res, next) {
+  try {
+    const userId = req.user.userId;
+    await Patient.deleteOne({ userId });
+    await User.deleteOne({ _id: userId });
+    res.json({ success: true, message: 'Account deleted' });
+  } catch (err) { next(err); }
+}
 
 export async function forgotPassword(req, res, next) {
   try {
