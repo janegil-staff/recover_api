@@ -8,7 +8,8 @@ import { sendResetCode } from '../utils/mailer.js';
 
 export async function register(req, res, next) {
   try {
-    const { email, password, name, language, age, gender, height } = req.body;
+    const { email, password, name, language, age, gender, height, weight } = req.body;
+    console.log("WEAITH: ", weight);
     if (!email || !password)
       return res.status(400).json({ success: false, message: 'Email and password required' });
 
@@ -26,6 +27,7 @@ export async function register(req, res, next) {
       ...(age    ? { age:    parseInt(age,    10) } : {}),
       ...(gender ? { gender }                       : {}),
       ...(height ? { height: parseInt(height, 10) } : {}),
+      ...(weight ? { weight: parseInt(weight, 10) } : {}),
     });
 
     const token        = signToken({ userId: user._id.toString(), role: user.role });

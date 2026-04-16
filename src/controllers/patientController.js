@@ -41,7 +41,7 @@ export async function getProfile(req, res, next) {
 
 export async function updateProfile(req, res, next) {
   try {
-    const allowed = ["age", "gender", "height", "shareNotes"];
+    const allowed = ["age", "gender", "height", "shareNotes", "weight"];
     const update = {};
     for (const k of allowed)
       if (req.body[k] !== undefined) update[k] = req.body[k];

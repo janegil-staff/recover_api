@@ -27,6 +27,7 @@ const PatientSchema = new mongoose.Schema(
     },
     age: { type: Number, default: 0 },
     height: { type: Number, default: 0 },
+    weight: { type: Number, default: 0 },
     gender: {
       type: String,
       enum: ["male", "female", "other", "undefined"],
