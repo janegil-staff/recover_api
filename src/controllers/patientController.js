@@ -65,6 +65,7 @@ export async function updateProfile(req, res, next) {
 }
 
 // ── Records ───────────────────────────────────────────────────────────────────
+
 export async function upsertRecord(req, res, next) {
   try {
     const record = req.body;
@@ -75,11 +76,19 @@ export async function upsertRecord(req, res, next) {
       return res
         .status(404)
         .json({ success: false, message: "Patient not found" });
+
     const idx = patient.records.findIndex((r) => r.date === record.date);
     if (idx >= 0)
       patient.records[idx] = { ...patient.records[idx].toObject(), ...record };
     else patient.records.push(record);
+
     patient.records.sort((a, b) => a.date.localeCompare(b.date));
+
+    // Sync weight to patient profile if record includes it
+    if (record.weight != null && record.weight > 0) {
+      patient.weight = record.weight;
+    }
+
     await patient.save();
     res.json({ success: true, data: patient.records });
   } catch (err) {
@@ -282,36 +291,6 @@ export async function updateViewedAdvice(req, res, next) {
       { new: true },
     );
     res.json({ success: true, data: patient.viewedAdvice });
-  } catch (err) {
-    next(err);
-  }
-}
-
-export async function upsertRecord(req, res, next) {
-  try {
-    const record = req.body;
-    if (!record?.date)
-      return res.status(400).json({ success: false, message: "date required" });
-    const patient = await Patient.findOne({ userId: req.user.userId });
-    if (!patient)
-      return res
-        .status(404)
-        .json({ success: false, message: "Patient not found" });
-
-    const idx = patient.records.findIndex((r) => r.date === record.date);
-    if (idx >= 0)
-      patient.records[idx] = { ...patient.records[idx].toObject(), ...record };
-    else patient.records.push(record);
-
-    patient.records.sort((a, b) => a.date.localeCompare(b.date));
-
-    // Sync weight to patient profile if record includes it
-    if (record.weight != null && record.weight > 0) {
-      patient.weight = record.weight;
-    }
-
-    await patient.save();
-    res.json({ success: true, data: patient.records });
   } catch (err) {
     next(err);
   }
