@@ -232,6 +232,21 @@ export async function bulkSaveMedications(req, res, next) {
   }
 }
 
+export async function deleteRecord(req, res, next) {
+  try {
+    const { date } = req.params;
+    const patient = await Patient.findOne({ userId: req.user.userId });
+    if (!patient)
+      return res.status(404).json({ success: false, message: "Patient not found" });
+    const before = patient.records.length;
+    patient.records = patient.records.filter(r => r.date !== date);
+    if (patient.records.length === before)
+      return res.status(404).json({ success: false, message: "Record not found" });
+    await patient.save();
+    res.json({ success: true, data: patient.records });
+  } catch (err) { next(err); }
+}
+
 export async function updateRelevantAdvice(req, res, next) {
   try {
     const { relevantAdvice } = req.body;
