@@ -126,12 +126,10 @@ export async function updateQuestionnaire(req, res, next) {
     ];
     const { key, data } = req.body;
     if (!allowed.includes(key))
-      return res
-        .status(400)
-        .json({
-          success: false,
-          message: `key must be one of ${allowed.join(", ")}`,
-        });
+      return res.status(400).json({
+        success: false,
+        message: `key must be one of ${allowed.join(", ")}`,
+      });
     const patient = await Patient.findOneAndUpdate(
       { userId: req.user.userId },
       {
@@ -237,14 +235,20 @@ export async function deleteRecord(req, res, next) {
     const { date } = req.params;
     const patient = await Patient.findOne({ userId: req.user.userId });
     if (!patient)
-      return res.status(404).json({ success: false, message: "Patient not found" });
+      return res
+        .status(404)
+        .json({ success: false, message: "Patient not found" });
     const before = patient.records.length;
-    patient.records = patient.records.filter(r => r.date !== date);
+    patient.records = patient.records.filter((r) => r.date !== date);
     if (patient.records.length === before)
-      return res.status(404).json({ success: false, message: "Record not found" });
+      return res
+        .status(404)
+        .json({ success: false, message: "Record not found" });
     await patient.save();
     res.json({ success: true, data: patient.records });
-  } catch (err) { next(err); }
+  } catch (err) {
+    next(err);
+  }
 }
 
 export async function updateRelevantAdvice(req, res, next) {
@@ -269,13 +273,46 @@ export async function updateViewedAdvice(req, res, next) {
   try {
     const { viewedAdvice } = req.body;
     if (!Array.isArray(viewedAdvice))
-      return res.status(400).json({ success: false, message: 'viewedAdvice must be an array' });
+      return res
+        .status(400)
+        .json({ success: false, message: "viewedAdvice must be an array" });
     const patient = await Patient.findOneAndUpdate(
       { userId: req.user.userId },
       { $set: { viewedAdvice } },
-      { new: true }
+      { new: true },
     );
     res.json({ success: true, data: patient.viewedAdvice });
-  } catch (err) { next(err); }
+  } catch (err) {
+    next(err);
+  }
 }
 
+export async function upsertRecord(req, res, next) {
+  try {
+    const record = req.body;
+    if (!record?.date)
+      return res.status(400).json({ success: false, message: "date required" });
+    const patient = await Patient.findOne({ userId: req.user.userId });
+    if (!patient)
+      return res
+        .status(404)
+        .json({ success: false, message: "Patient not found" });
+
+    const idx = patient.records.findIndex((r) => r.date === record.date);
+    if (idx >= 0)
+      patient.records[idx] = { ...patient.records[idx].toObject(), ...record };
+    else patient.records.push(record);
+
+    patient.records.sort((a, b) => a.date.localeCompare(b.date));
+
+    // Sync weight to patient profile if record includes it
+    if (record.weight != null && record.weight > 0) {
+      patient.weight = record.weight;
+    }
+
+    await patient.save();
+    res.json({ success: true, data: patient.records });
+  } catch (err) {
+    next(err);
+  }
+}
