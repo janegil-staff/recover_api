@@ -133,19 +133,10 @@ export async function changeEmail(req, res, next) {
 
 export async function deleteAccount(req, res, next) {
   try {
-    const { password } = req.body;
-    if (!password)
-      return res.status(400).json({ success: false, message: 'Password required' });
-
     const user = await User.findById(req.user.userId);
     if (!user)
       return res.status(404).json({ success: false, message: 'User not found' });
 
-    const valid = await user.comparePassword(password);
-    if (!valid)
-      return res.status(401).json({ success: false, message: 'Invalid password' });
-
-    // Delete patient data first, then the user
     await Patient.deleteOne({ userId: user._id });
     await User.deleteOne({ _id: user._id });
 
