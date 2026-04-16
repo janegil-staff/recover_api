@@ -83,6 +83,7 @@ export const redeemShareCode = async (req, res) => {
         age: patient.age,
         gender: patient.gender,
         height: patient.height,
+        weight: patient.weight,
         records,
         medicines: patient.medicines ?? [],
         vaccinations: patient.vaccinations ?? [],
