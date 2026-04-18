@@ -22,6 +22,14 @@ const UserSchema = new mongoose.Schema(
     pinHash: { type: String, default: null },
     resetCode: { type: String },
     resetCodeExpires: { type: Date },
+    isAdmin: {
+      type: Boolean,
+      default: false,
+    },
+    isBanned: {
+      type: Boolean,
+      default: false,
+    },
   },
   { timestamps: true },
 );
